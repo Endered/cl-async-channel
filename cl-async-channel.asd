@@ -1,5 +1,6 @@
 (defsystem :cl-async-channel
-  :depends-on (:cl-async)
+  :depends-on (:cl-async :bordeaux-threads)
   :components ((:module "src"
                 :components
-                ((:file "main")))))
+                ((:file "main")
+		 (:file "queue")))))
