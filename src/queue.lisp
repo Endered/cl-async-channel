@@ -10,8 +10,7 @@
 
 (in-package :cl-async-channel/queue)
 
-(defstruct (queue (:constructor %make-queue)
-		  (:conc-name %queue))
+(defstruct (queue (:constructor %make-queue))
   head
   tail
   size)
@@ -24,10 +23,6 @@
 (defmethod queue-empty-p ((queue queue))
   (with-slots (size) queue
     (zerop size)))
-
-(defmethod queue-size ((queue queue))
-  (with-slots (size) queue
-    size))
 
 (defmethod peek-queue ((queue queue))
   (with-slots (head size) queue
