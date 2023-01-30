@@ -2,7 +2,7 @@
   :depends-on (:cl-async :bordeaux-threads)
   :components ((:module "src"
                 :components
-                ((:file "main")
-		 (:file "cl-async-channel")
+                ((:file "main" :depends-on ("cl-async-channel"))
+		 (:file "cl-async-channel" :depends-on ("channel"))
 		 (:file "queue")
-		 (:file "channel")))))
+		 (:file "channel" :depends-on ("queue"))))))
