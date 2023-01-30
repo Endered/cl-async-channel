@@ -3,4 +3,6 @@
   :components ((:module "src"
                 :components
                 ((:file "main")
-		 (:file "queue")))))
+		 (:file "cl-async-channel")
+		 (:file "queue")
+		 (:file "channel")))))
