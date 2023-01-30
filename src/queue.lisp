@@ -14,57 +14,49 @@
 		  (:conc-name %queue))
   head
   tail
-  lock
   size)
 
 (defun make-queue ()
   (%make-queue :head nil
 	       :tail nil
-	       :size 0
-	       :lock (bt:make-lock "cl-async-channel/queue")))
+	       :size 0))
 
 (defmethod queue-empty-p ((queue queue))
-  (with-slots (size lock) queue
-    (bt:with-lock-held (lock)
-      (zerop size))))
+  (with-slots (size) queue
+    (zerop size)))
 
 (defmethod queue-size ((queue queue))
-  (with-slots (size lock) queue
-    (bt:with-lock-held (lock)
-      size)))
+  (with-slots (size) queue
+    size))
 
 (defmethod peek-queue ((queue queue))
-  (with-slots (head size lock) queue
-    (bt:with-lock-held (lock)
-      (when (zerop size)
-	(error "queue must have element on peek"))
-      (car head))))
+  (with-slots (head size) queue
+    (when (zerop size)
+      (error "queue must have element on peek"))
+    (car head)))
 
 (defmethod push-queue (item (queue queue))
-  (with-slots (head tail size lock) queue
-    (bt:with-lock-held (lock)
-      (cond ((zerop size)
-	     (let ((new (list item)))
-	       (setf head new)
-	       (setf tail new)
-	       (setf size 1)))
-	    (t
-	     (setf (cdr tail) (list item))
-	     (setf tail (cdr tail))
-	     (incf size))))))
+  (with-slots (head tail size) queue
+    (cond ((zerop size)
+	   (let ((new (list item)))
+	     (setf head new)
+	     (setf tail new)
+	     (setf size 1)))
+	  (t
+	   (setf (cdr tail) (list item))
+	   (setf tail (cdr tail))
+	   (incf size)))))
 
 (defmethod pop-queue ((queue queue))
-  (with-slots (head tail size lock) queue
-    (bt:with-lock-held (lock)
-      (when (zerop size)
-	(error "queue must have element on pop"))
-      (prog1
-	  (car head)
-	(cond ((eq 1 size)
-	       (setf head nil)
-	       (setf tail nil)
-	       (setf size 0))
-	      (t
-	       (setf head (cdr head))
-	       (decf size)))))))
-
+  (with-slots (head tail size) queue
+    (when (zerop size)
+      (error "queue must have element on pop"))
+    (prog1
+	(car head)
+      (cond ((eq 1 size)
+	     (setf head nil)
+	     (setf tail nil)
+	     (setf size 0))
+	    (t
+	     (setf head (cdr head))
+	     (decf size))))))
