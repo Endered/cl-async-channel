@@ -89,7 +89,7 @@
        ((work-senders ()
 	  (when (queue-empty-p senders)
 	    (return-from work-senders nil))
-	  (unless (< (queue-size senders) limit)
+	  (unless (< (queue-size datas) limit)
 	    (return-from work-senders nil))
 	  (let ((head (pop-queue senders)))
 	    (bt:with-lock-held ((active-manager-lock head))
