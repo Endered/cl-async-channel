@@ -23,18 +23,24 @@
   datas
   lock)
 
-(defstruct active-manager
+(defstruct (active-manager (:constructor %make-active-manager))
   id
   active
   lock)
 
-(defstruct (sender (:constructor %make-sender)
-		   (:include active-manager))
+(defun make-active-manager ()
+  (%make-active-manager
+   :id (get-unique-id)
+   :active t
+   :lock (bt:make-lock "cl-async-channel/active-manager")))
+
+(defstruct (sender (:constructor %make-sender))
+  active-manager
   data
   callback)
 
-(defstruct (reciever (:constructor %make-reciever)
-		     (:include active-manager))
+(defstruct (reciever (:constructor %make-reciever))
+  active-manager
   callback)
 
 (let ((lock (bt:make-lock "cl-async-channel/atomic-counter"))
@@ -44,21 +50,34 @@
       (incf count)
       count)))
 
-(defun make-sender (data callback lock)
+(defun make-sender (data callback active-manager)
   (%make-sender
    :data data
    :callback callback
-   :id (get-unique-id)
-   :active t
-   :lock lock))
+   :active-manager active-manager))
 
-(defun make-reciever (callback lock)
+(defun make-reciever (callback active-manager)
   (%make-reciever
    :callback callback
-   :id (get-unique-id)
-   :active t
-   :lock lock))
+   :active-manager active-manager))
 
+(defmethod get-lock ((sender sender))
+  (active-manager-lock (sender-active-manager sender)))
+
+(defmethod get-lock ((reciever reciever))
+  (active-manager-lock (reciever-active-manager reciever)))
+
+(defmethod active-p ((sender sender))
+  (active-manager-active (sender-active-manager sender)))
+
+(defmethod active-p ((reciever reciever))
+  (active-manager-active (reciever-active-manager reciever)))
+
+(defmethod get-id ((sender sender))
+  (active-manager-id (sender-active-manager sender)))
+
+(defmethod get-id ((reciever reciever))
+  (active-manager-id (reciever-active-manager reciever)))
 
 (defun make-channel (limit)
   (%make-channel
@@ -92,8 +111,8 @@
 	  (unless (< (queue-size datas) limit)
 	    (return-from work-senders nil))
 	  (let ((head (pop-queue senders)))
-	    (bt:with-lock-held ((active-manager-lock head))
-	      (when (active-manager-active head)
+	    (bt:with-lock-held ((get-lock head))
+	      (when (active-p head)
 		(activate head t)
 		(push-queue (sender-data head) datas))
 	      t)))
@@ -103,8 +122,8 @@
 	  (when (queue-empty-p datas)
 	    (return-from work-recievers nil))
 	  (let ((head (pop-queue recievers)))
-	    (bt:with-lock-held ((active-manager-lock head))
-	      (when (active-manager-active head)
+	    (bt:with-lock-held ((get-lock head))
+	      (when (active-p head)
 		(activate head (pop-queue datas)))
 	      t)))
 	(work-both ()
@@ -119,11 +138,11 @@
 	    (destructuring-bind (first second)
 		(sort (list sender reciever)
 		      #'<
-		      :key #'active-manager-id)
-	      (bt:with-lock-held ((active-manager-lock first))
-		(bt:with-lock-held ((active-manager-lock second))
-		  (when (and (active-manager-active sender)
-			     (active-manager-active reciever))
+		      :key #'get-id)
+	      (bt:with-lock-held ((get-lock first))
+		(bt:with-lock-held ((get-lock second))
+		  (when (and (active-p sender)
+			     (active-p reciever))
 		    (pop-queue senders)
 		    (pop-queue recievers)
 		    (activate sender t)
@@ -148,7 +167,7 @@
 			    (and (eq 3 (length (car clause)))
 				 (keyword-p (caar clause) "RECV")))))
 		 clauses))
-  (let ((lock (gensym))
+  (let ((active-manager (gensym))
 	(refresh (gensym)))
     (labels ((rec (clauses tmp-binds final-body channels)
 	       (if clauses
@@ -170,7 +189,7 @@
 						  (lambda (,(nth 3 channel-op))
 						    (,refresh)
 						    ,@body)
-						  ,lock))
+						  ,active-manager))
 				    final-body)
 				   (cons channel channels))))
 			   ((keyword-p (car channel-op) "RECV")
@@ -186,10 +205,10 @@
 						    (lambda (,(nth 2 channel-op))
 						      (,refresh)
 						      ,@body)
-						    ,lock))
+						    ,active-manager))
 				    final-body)
 				   (cons channel channels))))))
-		   `(let ((,lock (bt:make-lock "cl-async-channel/select"))
+		   `(let ((,active-manager (cl-async-channel/channel::make-active-manager))
 			  ,@ (reverse tmp-binds))
 		      (labels ((,refresh ()
 				 ,@ (mapcar (lambda (channel)
@@ -206,15 +225,15 @@
 
 (defmethod activate ((sender sender) data)
   (as:with-delay (0)
-    (with-slots (callback active) sender
-      (funcall callback data)
-      (setf active nil))))
+    (with-slots (callback active-manager) sender
+      (setf (active-manager-active active-manager) nil)
+      (funcall callback data))))
 
 (defmethod activate ((reciever reciever) data)
   (as:with-delay (0)
-    (with-slots (callback active) reciever
-      (funcall callback data)
-      (setf active nil))))
+    (with-slots (callback active-manager) reciever
+      (setf (active-manager-active active-manager) nil)
+      (funcall callback data))))
 
 (defmethod deactivate ((active-manager active-manager))
   (setf (active-manager-active active-manager) nil))
