@@ -14,6 +14,8 @@ Please use below functions without `make-channel` in cl-async's event loop
 ### send to channel 
 ```lisp
 (send {data} {channel} {callback function})
+;; or 
+(>! ({data} {channel} [{result of send}]) ...)
 ;; and callback must be like 
 (lambda (x) ...)
 ;; currently the value of variable x is t
@@ -22,6 +24,8 @@ Please use below functions without `make-channel` in cl-async's event loop
 ### recv from channel 
 ```lisp
 (recv {channel} {callback function})
+;; or
+(<! ({channel} [{result of recv}]) ...)
 ;; and callback must be like 
 (lambda (x) ...)
 ;; the value of variable x is data sended from channel
