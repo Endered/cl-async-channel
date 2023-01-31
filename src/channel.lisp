@@ -16,6 +16,11 @@
 
 (in-package :cl-async-channel/channel)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun keyword-p (x name)
+    (and (symbolp x)
+	 (string= name x))))
+
 (defstruct (channel (:constructor %make-channel))
   limit
   senders
@@ -155,9 +160,7 @@
 	    (rec))))
      (rec))))
 
-(defun keyword-p (x name)
-  (and (symbolp x)
-       (string= name x)))
+
 
 (defmacro select (&body clauses)
   (assert (every (lambda (clause)
