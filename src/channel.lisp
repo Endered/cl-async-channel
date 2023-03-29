@@ -8,6 +8,9 @@
    :push-queue
    :pop-queue
    :peek-queue)
+  (:import-from
+   :cl-async-channel/util
+   :callback-lambda)
   (:export
    :make-channel
    :send
@@ -106,7 +109,6 @@
 
 (defun refresh-channel (channel)
   (uiop:nest
-   (as:with-delay (0))
    (with-slots (limit senders recievers datas lock) channel)
    (bt:with-lock-held (lock))
    (labels
@@ -189,7 +191,7 @@
 				    `(add-sender ,channel
 						 (cl-async-channel/channel::make-sender
 						  data
-						  (lambda (,(nth 3 channel-op))
+						  (cl-async-channel/util::callback-lambda (,(nth 3 channel-op))
 						    (,refresh)
 						    ,@body)
 						  ,active-manager))
@@ -205,7 +207,7 @@
 				   (cons
 				    `(add-reciever ,channel
 						   (cl-async-channel/channel::make-reciever
-						    (lambda (,(nth 2 channel-op))
+						    (cl-async-channel/util::callback-lambda (,(nth 2 channel-op))
 						      (,refresh)
 						      ,@body)
 						    ,active-manager))
