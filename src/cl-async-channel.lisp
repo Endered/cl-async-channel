@@ -13,7 +13,9 @@
    :select
 
    :>!
-   :<!))
+   :>!!
+   :<!
+   :<!!))
 
 (in-package :cl-async-channel)
 
@@ -26,6 +28,13 @@
 	,@ (if result () `((declare (ignorable ,x))))
 	,@body))))
 
+(defun >!! (data channel)
+  (let ((res))
+    (as:with-event-loop ()
+      (>! (data channel tmp)
+	(setf res tmp)))
+    res))
+
 (defmacro <! ((channel &optional result) &body body)
   (let ((x (or result (gensym))))
     `(cl-async-channel:recv
@@ -33,3 +42,10 @@
       (lambda (,x)
 	,@ (if result () `((declare (ignorable ,x))))
 	,@body))))
+
+(defun <!! (channel)
+  (let ((res))
+    (as:with-event-loop ()
+      (<! (channel tmp)
+	(setf res tmp)))
+    res))
