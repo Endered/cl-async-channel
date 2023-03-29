@@ -5,4 +5,5 @@
                 ((:file "main" :depends-on ("cl-async-channel"))
 		 (:file "cl-async-channel" :depends-on ("channel"))
 		 (:file "queue")
-		 (:file "channel" :depends-on ("queue"))))))
+		 (:file "channel" :depends-on ("queue" "util"))
+		 (:file "util")))))
